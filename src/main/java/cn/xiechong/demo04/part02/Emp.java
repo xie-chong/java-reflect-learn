@@ -67,7 +67,7 @@ public class Emp {
 
 class ClassInstanceFactory {
     private ClassInstanceFactory() {
-    }        //构造方法私有化
+    }// 构造方法私有化
 
     /**
      * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
@@ -80,19 +80,18 @@ class ClassInstanceFactory {
         // 如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
         try {
             Object o = tClass.getDeclaredConstructor().newInstance();
-            BeanUtils.setValue(o, value);        // 通过反射设置属性
-            return tClass.cast(o);    // 获取对象
+            BeanUtils.setValue(o, value);// 通过反射设置属性
+            return tClass.cast(o);// 获取对象
         } catch (Exception e) {
-            e.printStackTrace();        //此时如果出现异常,将异常抛出也没有多大作用
+            e.printStackTrace();//此时如果出现异常,将异常抛出也没有多大作用
             return null;
         }
-
-
     }
 
 }
 
-class BeanUtils {    //进行Bean处理的工具类
+class BeanUtils {// 进行Bean处理的工具类
+
     private BeanUtils() {
     }
 
@@ -103,18 +102,18 @@ class BeanUtils {    //进行Bean处理的工具类
      * @param value 包含有指定内容的字符串
      */
     public static void setValue(Object obj, String value) {
-        String results[] = value.split("\\|");//按照竖线进行每一组属性的拆分
-        for (int i = 0; i < results.length; i++) {  //循环设置属性内容
-            String attval[] = results[i].split(":");   //获取属性名称及内容
+        String results[] = value.split("\\|");// 按照竖线进行每一组属性的拆分
+        for (int i = 0; i < results.length; i++) {// 循环设置属性内容
+            String attval[] = results[i].split(":");// 获取属性名称及内容
             try {
                 Field field = obj.getClass().getDeclaredField(attval[0]);
                 Method setMethod = obj.getClass()
                         .getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
                 Object val = BeanUtils.getAttributeValue(field.getType().getName(), attval[1]);
-                setMethod.invoke(obj, val);        //使用setter方法进行内容的赋值
-            } catch (Exception e) { //捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+                setMethod.invoke(obj, val);// 使用setter方法进行内容的赋值
+            } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+                e.printStackTrace();
             }
-
         }
     }
 
@@ -126,7 +125,7 @@ class BeanUtils {    //进行Bean处理的工具类
      * @return 转化后的数据
      */
     private static Object getAttributeValue(String type, String value) {
-        if ("long".equals(type) || "java.lang.Long".equals(type)) {   //长整型
+        if ("long".equals(type) || "java.lang.Long".equals(type)) {// 长整型
             return Long.parseLong(value);
         } else if ("int".equals(type) || "java.lang.Integer".equals(type)) {
             return Integer.valueOf(value);
@@ -134,12 +133,12 @@ class BeanUtils {    //进行Bean处理的工具类
             return Double.valueOf(value);
         } else if ("java.util.Date".equals(type)) {
             SimpleDateFormat dateFormat = null;
-            if (value.matches("\\d{4}-\\d{2}-\\d{2}")) { //日期类型
+            if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {// 日期类型
                 dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            } else if (value.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {   //日期时间
+            } else if (value.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {// 日期时间
                 dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             } else {
-                return new Date();  //当前日期
+                return new Date();// 当前日期
             }
             try {
                 return dateFormat.parse(value);
@@ -166,6 +165,4 @@ class StringUtils {
             return str.substring(0, 1).toUpperCase() + str.substring(1);
         }
     }
-
-
 }

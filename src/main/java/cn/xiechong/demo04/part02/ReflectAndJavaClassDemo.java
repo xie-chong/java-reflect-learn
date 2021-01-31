@@ -1,7 +1,7 @@
 package cn.xiechong.demo04.part02;
 
 /**
- * 四.设置多种数据类型
+ * 设置多种数据类型
  */
 public class ReflectAndJavaClassDemo {
     public static void main(String[] args) {

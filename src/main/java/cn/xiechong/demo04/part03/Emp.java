@@ -129,7 +129,7 @@ class Dept {
 
 class ClassInstanceFactory {
     private ClassInstanceFactory() {
-    }        //构造方法私有化
+    }// 构造方法私有化
 
     /**
      * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
@@ -148,10 +148,7 @@ class ClassInstanceFactory {
             e.printStackTrace();// 此时如果出现异常,将异常抛出也没有多大作用
             return null;
         }
-
-
     }
-
 }
 
 class BeanUtils {// 进行Bean处理的工具类
@@ -197,7 +194,6 @@ class BeanUtils {// 进行Bean处理的工具类
                 }
             } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
             }
-
         }
     }
 
@@ -249,5 +245,4 @@ class StringUtils {
             return str.substring(0, 1).toUpperCase() + str.substring(1);
         }
     }
-
 }

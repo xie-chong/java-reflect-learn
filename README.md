@@ -23,10 +23,10 @@
 
 [11 | 传统简单java类](#11)   
 [12 | 属性自动设置解决方案](#12)    
-[08 | 反射调用普通方法](#08)    
-[09 | 反射调用成员](#09)    
-[10 | Unsafe工具类](#10)
-
+[13 | 单级属性配置](#13)    
+[14 | 设置多种数据类型](#14)    
+[15 | 级联对象实例化](#15)   
+[16 | 级联属性设置](#16)   
 
 ---
 
@@ -1566,9 +1566,663 @@ public class ReflectAndJavaClassDemo {
     public static void main(String[] args) {
         // 在Emp类中,存在两个String类型的成员变量ename,job,以及其相关的getter,setter
         String value = "ename:Mike|job:code java";
-        Emp emp = ClassInstanceFactory.create(Emp.class, value);//产生实例化对象
+        Emp emp = ClassInstanceFactory.create(Emp.class, value);// 产生实例化对象
     }
 }
 ```
 
 这样在当前的开发之中，所需要留给用户完善的就是ClassInstanceFactory.create()方法的具体实现。
+
+
+
+
+---
+<h2 id="13">13 | 单级属性配置</h2>
+
+---
+
+对于此时的Emp类型里面会发现所给出的数据类型都没有其他的引用关联了，只是描述了Emp本类的对象，这样的设置我们称他为单级属性配置，所以此时应该需要处理两件事情：
+
+1. 需要通过反射进行指定类对象的实例化处理；
+2. 进行内容的设置(Field属性类型，方法名称，要设置的内容)
+
+```
+package cn.xiechong.demo04.part01;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+public class Emp {
+    private String ename;
+    private String job;
+
+    public void setEname(String ename) {
+        this.ename = ename;
+    }
+
+    public void setJob(String job) {
+        this.job = job;
+    }
+
+    public String getEname() {
+        return ename;
+    }
+
+    public String getJob() {
+        return job;
+    }
+}
+
+class ClassInstanceFactory {
+    private ClassInstanceFactory() {
+    }// 构造方法私有化
+
+    /**
+     * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
+     *
+     * @param tClass 要进行反射实例化的Class类对象,有Class就可以反射实例化对象
+     * @param value  要设置给对象的属性内容
+     * @return 一个已经配置完内容的简单java类对象
+     */
+    public static <T> T create(Class<T> tClass, String value) {
+        // 如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
+        try {
+            Object o = tClass.getDeclaredConstructor().newInstance();
+            BeanUtils.setValue(o, value);// 通过反射设置属性
+            return tClass.cast(o);// 获取对象
+        } catch (Exception e) {
+            e.printStackTrace();// 此时如果出现异常,将异常抛出也没有多大作用
+            return null;
+        }
+    }
+
+}
+
+class BeanUtils {// 进行Bean处理的工具类
+
+    private BeanUtils() {
+    }
+
+    /**
+     * 实现指定对象的属性设置
+     *
+     * @param obj   要进行反射操作的实例化对象
+     * @param value 包含有指定内容的字符串
+     */
+    public static void setValue(Object obj, String value) {
+        String results[] = value.split("\\|");// 按照竖线进行每一组属性的拆分
+        for (int i = 0; i < results.length; i++) {// 循环设置属性内容
+            String[] attval = results[i].split(":");// 获取属性名称及内容
+            try {
+                Field field = obj.getClass().getDeclaredField(attval[0]);
+                Method setMethod = obj.getClass().getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
+                setMethod.invoke(obj, attval[1]);// 使用setter方法进行内容的赋值
+            } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+            }
+        }
+    }
+}
+
+class StringUtils {
+    private StringUtils() {
+    }
+
+    public static String initcap(String str) {
+        if (str == null || str.equals("")) {
+            return str;
+        }
+        if (str.length() == 1) {
+            return str.toUpperCase();
+        } else {
+            return str.substring(0, 1).toUpperCase() + str.substring(1);
+        }
+    }
+
+}
+```
+
+```
+package cn.xiechong.demo04.part01;
+
+/**
+ * 单级属性配置
+ */
+public class ReflectAndJavaClassDemo {
+    public static void main(String[] args) {
+        // 在Emp类中,存在两个String类型的成员变量ename,job,以及其相关的getter,setter
+        String value = "ename:Mike|job:code java";
+        Emp emp = ClassInstanceFactory.create(Emp.class, value);// 产生实例化对象
+        System.out.println("姓名: " + emp.getEname() + " 职位: " + emp.getJob());
+    }
+}
+```
+运行结果
+
+```
+姓名: Mike 职位: code java
+
+Process finished with exit code 0
+```
+
+ClassInstanceFactory负责实例化对象并且调用BeanUtils类实现属性代码的设置，此时即便类中的属性再多，那么也可以轻松的实现setter的调用，轻松实现类对象实例化处理。
+
+
+
+
+
+---
+<h2 id="14">14 | 设置多种数据类型</h2>
+
+---
+
+虽然上述代码可以实现对于属性的配置，但是我们仍然需要考虑一个实际的情况，当前所给定的数据类型只能是String，但是在实际的开发之中，面对简单java类中的属性类型一般的可选为：Long(long)，Integer(int)，Double(double)，String，Date（日期，日期时间），所以这个时候对于当前的程序代码就必须做出修改，要求可以实现各种数据类型的配置。
+
+既然要求可以实现不同类型的内容设置，并且BeanUtils类主要是完成属性赋值处理的，那么就可以在这个类之中追加有一些列的处理方法：
+
+```
+package cn.xiechong.demo04.part02;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class Emp {
+    private long empo;
+    private String ename;
+    private String job;
+    private double salary;
+    private Date hireDate;
+
+    public void setEname(String ename) {
+        this.ename = ename;
+    }
+
+    public void setJob(String job) {
+        this.job = job;
+    }
+
+    public String getEname() {
+        return ename;
+    }
+
+    public String getJob() {
+        return job;
+    }
+
+    public long getEmpo() {
+        return empo;
+    }
+
+    public void setEmpo(long empo) {
+        this.empo = empo;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(double salary) {
+        this.salary = salary;
+    }
+
+    public Date getHireDate() {
+        return hireDate;
+    }
+
+    public void setHireDate(Date hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    @Override
+    public String toString() {
+        return "Emp{" +
+                "empo=" + empo +
+                ", ename='" + ename + '\'' +
+                ", job='" + job + '\'' +
+                ", salary=" + salary +
+                ", hireDate=" + hireDate +
+                '}';
+    }
+}
+
+class ClassInstanceFactory {
+    private ClassInstanceFactory() {
+    }// 构造方法私有化
+
+    /**
+     * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
+     *
+     * @param tClass 要进行反射实例化的Class类对象,有Class就可以反射实例化对象
+     * @param value  要设置给对象的属性内容
+     * @return 一个已经配置完内容的简单java类对象
+     */
+    public static <T> T create(Class<T> tClass, String value) {
+        // 如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
+        try {
+            Object o = tClass.getDeclaredConstructor().newInstance();
+            BeanUtils.setValue(o, value);// 通过反射设置属性
+            return tClass.cast(o);// 获取对象
+        } catch (Exception e) {
+            e.printStackTrace();//此时如果出现异常,将异常抛出也没有多大作用
+            return null;
+        }
+    }
+
+}
+
+class BeanUtils {// 进行Bean处理的工具类
+
+    private BeanUtils() {
+    }
+
+    /**
+     * 实现指定对象的属性设置
+     *
+     * @param obj   要进行反射操作的实例化对象
+     * @param value 包含有指定内容的字符串
+     */
+    public static void setValue(Object obj, String value) {
+        String results[] = value.split("\\|");// 按照竖线进行每一组属性的拆分
+        for (int i = 0; i < results.length; i++) {// 循环设置属性内容
+            String attval[] = results[i].split(":");// 获取属性名称及内容
+            try {
+                Field field = obj.getClass().getDeclaredField(attval[0]);
+                Method setMethod = obj.getClass()
+                        .getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
+                Object val = BeanUtils.getAttributeValue(field.getType().getName(), attval[1]);
+                setMethod.invoke(obj, val);// 使用setter方法进行内容的赋值
+            } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 实现属性类型转化处理
+     *
+     * @param type  属性类型,通过Field获取
+     * @param value 属性的内容,传入的都是字符串,需要将其转化为指定的类型
+     * @return 转化后的数据
+     */
+    private static Object getAttributeValue(String type, String value) {
+        if ("long".equals(type) || "java.lang.Long".equals(type)) {// 长整型
+            return Long.parseLong(value);
+        } else if ("int".equals(type) || "java.lang.Integer".equals(type)) {
+            return Integer.valueOf(value);
+        } else if ("double".equals(type) || "java.lang.Double".equals(type)) {
+            return Double.valueOf(value);
+        } else if ("java.util.Date".equals(type)) {
+            SimpleDateFormat dateFormat = null;
+            if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {// 日期类型
+                dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            } else if (value.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {// 日期时间
+                dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            } else {
+                return new Date();// 当前日期
+            }
+            try {
+                return dateFormat.parse(value);
+            } catch (ParseException e) {
+                return new Date();
+            }
+        } else {
+            return value;
+        }
+    }
+}
+
+class StringUtils {
+    private StringUtils() {
+    }
+
+    public static String initcap(String str) {
+        if (str == null || str.equals("")) {
+            return str;
+        }
+        if (str.length() == 1) {
+            return str.toUpperCase();
+        } else {
+            return str.substring(0, 1).toUpperCase() + str.substring(1);
+        }
+    }
+}
+```
+
+```
+package cn.xiechong.demo04.part02;
+
+/**
+ * 设置多种数据类型
+ */
+public class ReflectAndJavaClassDemo {
+    public static void main(String[] args) {
+        // 在Emp类中,存在两个String类型的成员变量ename,job,以及其相关的getter,setter
+        String value = "ename:Mike|job:code java|empo:1258|salary:750|hireDate:1911-12-12";
+        Emp emp = ClassInstanceFactory.create(Emp.class, value);// 产生实例化对象
+        System.out.println(emp);
+    }
+}
+```
+
+运行结果
+```
+Emp{empo=1258, ename='Mike', job='code java', salary=750.0, hireDate=Tue Dec 12 00:00:00 CST 1911}
+
+Process finished with exit code 0
+```
+
+此时只是列举出了常用的几种数据类型，当然如果想将其作为一个产品推广，那就必须要考虑所有可能出现的数据类型，同时可能出现的日期格式也需要考虑。
+
+
+
+
+
+
+---
+<h2 id="15">15 | 级联对象实例化</h2>
+
+---
+
+如果说现在给定的类对象之中存在有其他的引用的级联关系的情况下，成为多级设置，例如：一个雇员属于一个部门，一个部门属于一个公司，所以这个时候对于简单Java类的定义如下：
+
+如果要通过Emp进行操作，则应该按照使用"."作为级联关系的处理，例： dept.dname，dept.loc，company.name，company.createDate，dept.dname:财务部；Emp类实例对象.getDept().setDname("财务部");
+
+考虑可以通过级联的配置，实现类中属性的实例化： String value ="ename:Mike|job:code java|empo:1258|salary:750|hireDate:1911-12-12|dept.dname:财务部" +"|dept.company.name:一个写java的公司"；现在的属性存在多级关系，那么对于多级的关系就必须与单级的配置区分开。
+
+```
+package cn.xiechong.demo04.part03;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class Emp {
+    private long empo;
+    private String ename;
+    private String job;
+    private double salary;
+    private Date hireDate;
+    private Dept dept;
+
+    public Dept getDept() {
+        return dept;
+    }
+
+    public void setDept(Dept dept) {
+        this.dept = dept;
+    }
+
+    public void setEname(String ename) {
+        this.ename = ename;
+    }
+
+    public void setJob(String job) {
+        this.job = job;
+    }
+
+    public String getEname() {
+        return ename;
+    }
+
+    public String getJob() {
+        return job;
+    }
+
+    public long getEmpo() {
+        return empo;
+    }
+
+    public void setEmpo(long empo) {
+        this.empo = empo;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(double salary) {
+        this.salary = salary;
+    }
+
+    public Date getHireDate() {
+        return hireDate;
+    }
+
+    public void setHireDate(Date hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    @Override
+    public String toString() {
+        return "Emp{" +
+                "empo=" + empo +
+                ", ename='" + ename + '\'' +
+                ", job='" + job + '\'' +
+                ", salary=" + salary +
+                ", hireDate=" + hireDate +
+                '}';
+    }
+}
+
+
+class Company {
+    private String name;
+    private Date createDate;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+}
+
+class Dept {
+    private String dname;
+    private String loc;
+    private Company company;
+
+    public String getDname() {
+        return dname;
+    }
+
+    public void setDname(String dname) {
+        this.dname = dname;
+    }
+
+    public String getLoc() {
+        return loc;
+    }
+
+    public void setLoc(String loc) {
+        this.loc = loc;
+    }
+
+    public Company getCompany() {
+        return company;
+    }
+
+    public void setCompany(Company company) {
+        this.company = company;
+    }
+}
+
+
+class ClassInstanceFactory {
+    private ClassInstanceFactory() {
+    }// 构造方法私有化
+
+    /**
+     * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
+     *
+     * @param tClass 要进行反射实例化的Class类对象,有Class就可以反射实例化对象
+     * @param value  要设置给对象的属性内容
+     * @return 一个已经配置完内容的简单java类对象
+     */
+    public static <T> T create(Class<T> tClass, String value) {
+        // 如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
+        try {
+            Object o = tClass.getDeclaredConstructor().newInstance();
+            BeanUtils.setValue(o, value);// 通过反射设置属性
+            return tClass.cast(o);// 获取对象
+        } catch (Exception e) {
+            e.printStackTrace();// 此时如果出现异常,将异常抛出也没有多大作用
+            return null;
+        }
+    }
+}
+
+class BeanUtils {// 进行Bean处理的工具类
+
+    private BeanUtils() {
+    }
+
+    /**
+     * 实现指定对象的属性设置
+     *
+     * @param obj   要进行反射操作的实例化对象
+     * @param value 包含有指定内容的字符串
+     */
+    public static void setValue(Object obj, String value) {
+        String results[] = value.split("\\|");// 按照竖线进行每一组属性的拆分
+        for (int i = 0; i < results.length; i++) {// 循环设置属性内容
+            String attval[] = results[i].split(":");// 获取属性名称及内容
+            try {
+                Object currentObject = obj;
+                if (attval[0].contains(".")) {// 这是多级配置
+                    String temp[] = attval[0].split("\\.");
+                    // 最后一位肯定是指定类中的属性名称,因此不在实例化处理的范畴之内
+                    for (int j = 0; j < temp.length - 1; j++) {// 实例化
+                        // 调用相应的getter方法,如果getter方法返回了空表示该对象为实例化
+                        Method getMethod = currentObject.getClass().getDeclaredMethod(
+                                "get" + StringUtils.initcap(temp[j]));
+                        if (getMethod.invoke(currentObject) == null) {// 该对象现在并没有被实例化
+                            Field field = currentObject.getClass().getDeclaredField(temp[j]);
+                            Method method = currentObject.getClass().getDeclaredMethod("set" + StringUtils.initcap(temp[j]), field.getType());
+                            Object newObject = field.getType().getDeclaredConstructor().newInstance();
+                            method.invoke(currentObject, newObject);
+                            currentObject = newObject;
+                        } else {
+                            currentObject = getMethod.invoke(currentObject);
+                        }
+                    }
+                } else {
+                    Field field = obj.getClass().getDeclaredField(attval[0]);
+                    Method setMethod = obj.getClass()
+                            .getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
+                    Object val = BeanUtils.getAttributeValue(field.getType().getName(), attval[1]);
+                    setMethod.invoke(obj, val);// 使用setter方法进行内容的赋值
+                }
+            } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+            }
+        }
+    }
+
+    /**
+     * 实现属性类型转化处理
+     *
+     * @param type  属性类型,通过Field获取
+     * @param value 属性的内容,传入的都是字符串,需要将其转化为指定的类型
+     * @return 转化后的数据
+     */
+    private static Object getAttributeValue(String type, String value) {
+        if ("long".equals(type) || "java.lang.Long".equals(type)) {// 长整型
+            return Long.parseLong(value);
+        } else if ("int".equals(type) || "java.lang.Integer".equals(type)) {
+            return Integer.valueOf(value);
+        } else if ("double".equals(type) || "java.lang.Double".equals(type)) {
+            return Double.valueOf(value);
+        } else if ("java.util.Date".equals(type)) {
+            SimpleDateFormat dateFormat = null;
+            if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {// 日期类型
+                dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            } else if (value.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {// 日期时间
+                dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            } else {
+                return new Date();// 当前日期
+            }
+            try {
+                return dateFormat.parse(value);
+            } catch (ParseException e) {
+                return new Date();
+            }
+        } else {
+            return value;
+        }
+    }
+}
+
+class StringUtils {
+    private StringUtils() {
+    }
+
+    public static String initcap(String str) {
+        if (str == null || str.equals("")) {
+            return str;
+        }
+        if (str.length() == 1) {
+            return str.toUpperCase();
+        } else {
+            return str.substring(0, 1).toUpperCase() + str.substring(1);
+        }
+    }
+}
+```
+
+```
+package cn.xiechong.demo04.part03;
+
+/**
+ * 级联对象实例化
+ */
+public class ReflectAndJavaClassDemo {
+    public static void main(String[] args) {
+        // 在Emp类中,存在两个String类型的成员变量ename,job,以及其相关的getter,setter
+        String value =
+                "ename:Mike|job:code java|empo:1258|salary:750|hireDate:1911-12-12|dept.dname:财务部" +
+                        "|dept.company.name:一个写java的公司";
+        Emp emp = ClassInstanceFactory.create(Emp.class, value);// 产生实例化对象
+        System.out.println(emp.getDept().getCompany());
+    }
+}
+```
+
+运行结果
+
+```
+cn.xiechong.demo04.part03.Company@3532ec19
+
+Process finished with exit code 0
+```
+
+这些自动的级联配置的实例化处理操作，在进行项目的编写之中将有很大的用处。
+
+
+
+
+
+
+
+---
+<h2 id="16">16 | 级联属性设置</h2>
+
+---
+
+
+
+
+
+

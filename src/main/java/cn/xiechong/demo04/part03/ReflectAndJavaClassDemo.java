@@ -1,7 +1,7 @@
 package cn.xiechong.demo04.part03;
 
 /**
- * 五.级联对象实例化
+ * 级联对象实例化
  */
 public class ReflectAndJavaClassDemo {
     public static void main(String[] args) {

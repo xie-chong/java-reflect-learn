@@ -26,7 +26,7 @@ public class Emp {
 
 class ClassInstanceFactory {
     private ClassInstanceFactory() {
-    }        //构造方法私有化
+    }// 构造方法私有化
 
     /**
      * 实例化对象创建的方法,该对象可以根据传入的字符串的结构"内容|属性:内容|"进行处理
@@ -36,22 +36,21 @@ class ClassInstanceFactory {
      * @return 一个已经配置完内容的简单java类对象
      */
     public static <T> T create(Class<T> tClass, String value) {
-        //如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
+        // 如果想采用反射进行简单Java类对象的属性设置的时候,类中必须要有无参构造
         try {
             Object o = tClass.getDeclaredConstructor().newInstance();
-            BeanUtils.setValue(o, value);        //通过反射设置属性
-            return tClass.cast(o);    //获取对象
+            BeanUtils.setValue(o, value);// 通过反射设置属性
+            return tClass.cast(o);// 获取对象
         } catch (Exception e) {
-            e.printStackTrace();        //此时如果出现异常,将异常抛出也没有多大作用
+            e.printStackTrace();// 此时如果出现异常,将异常抛出也没有多大作用
             return null;
         }
-
-
     }
 
 }
 
-class BeanUtils {    //进行Bean处理的工具类
+class BeanUtils {// 进行Bean处理的工具类
+
     private BeanUtils() {
     }
 
@@ -62,17 +61,15 @@ class BeanUtils {    //进行Bean处理的工具类
      * @param value 包含有指定内容的字符串
      */
     public static void setValue(Object obj, String value) {
-        String results[] = value.split("\\|");//按照竖线进行每一组属性的拆分
-        for (int i = 0; i < results.length; i++) {  //循环设置属性内容
-            String[] attval = results[i].split(":");   //获取属性名称及内容
+        String results[] = value.split("\\|");// 按照竖线进行每一组属性的拆分
+        for (int i = 0; i < results.length; i++) {// 循环设置属性内容
+            String[] attval = results[i].split(":");// 获取属性名称及内容
             try {
                 Field field = obj.getClass().getDeclaredField(attval[0]);
-                Method setMethod = obj.getClass()
-                        .getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
-                setMethod.invoke(obj, attval[1]);        //使用setter方法进行内容的赋值
-            } catch (Exception e) { //捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
+                Method setMethod = obj.getClass().getDeclaredMethod("set" + StringUtils.initcap(attval[0]), field.getType());
+                setMethod.invoke(obj, attval[1]);// 使用setter方法进行内容的赋值
+            } catch (Exception e) {// 捕获异常,否则的话一个属性不存在将会导致所有的属性都无法正常赋值
             }
-
         }
     }
 }
