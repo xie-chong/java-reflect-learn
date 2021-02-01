@@ -1,7 +1,7 @@
 package cn.xiechong.demo04.part04;
 
 /**
- * 六.级联属性设置
+ * 级联属性设置
  */
 public class ReflectAndJavaClassDemo {
     public static void main(String[] args) {
